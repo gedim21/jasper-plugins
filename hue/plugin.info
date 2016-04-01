@@ -1,0 +1,10 @@
+[Plugin]
+Name = hue
+Version = 1.0.0
+License = MIT
+URL = http://jasperproject.github.io/
+Description = Lets you control Philips Hue lights
+
+[Author]
+Name = Jasper Project
+URL = http://jasperproject.github.io/

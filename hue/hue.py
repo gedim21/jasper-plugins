@@ -9,36 +9,18 @@ dim = {'transitiontime': 75, 'bri': 75}
 
 
 class HuePlugin(plugin.SpeechHandlerPlugin):
+
     def __init__(self, *args, **kwargs):
         super(HuePlugin, self).__init__(*args, **kwargs)
 
-        try:
-            ip = self.profile['hue']['ip']
-        except KeyError:
-            ip = '192.168.2.101'
-
-        try:
-            self._bridge = Bridge(ip)
-            self._lights = self._bridge.get_light_objects()
-            self._groups = self._bridge.groups
-            self._light_names = []
-            self._group_names = []
-            for light in self._lights:
-                self._light_names.append(light.name)
-
-            for group in self._groups:
-                self._group_names.append(group.name)
-        except PhueRequestTimeout:
-            self._bridge = None
-            self._lights = None
-            self._light_names = []
-            self._group_names = []
+        self.connect_bridge()
+        self._command_names = ['TURN ON', 'TURN OFF', 'DIM', 'BRIGHTEN']
 
     def get_priority(self):
         return 10
 
     def get_phrases(self):
-        return self._light_names + self._group_names + ['ON', 'OFF', 'DIM']
+        return self._light_names + self._group_names + self._command_names
 
     def handle(self, text, mic):
         """
@@ -48,7 +30,7 @@ class HuePlugin(plugin.SpeechHandlerPlugin):
         :param text: -- user-input, typically transcribed speech
         :param mic: -- used to interact with the user (for both input and output)
         """
-        if self._bridge is None:
+        if not self.is_bridge_connected():
             mic.say(self.gettext("Sorry, but your bridge is not reachable at this moment."))
             return
 
@@ -92,13 +74,13 @@ class HuePlugin(plugin.SpeechHandlerPlugin):
         :param text: user-input, typically transcribed speech
         """
         text_matches_a_light = False
-        for light_name in self._light_names:
+        for light_name in self.get_light_names():
             if re.search(light_name, text, re.IGNORECASE):
                 text_matches_a_light = True
                 break
 
         text_matches_a_group = False
-        for group_name in self._group_names:
+        for group_name in self.get_group_names():
             if re.search(group_name, text, re.IGNORECASE):
                 text_matches_a_group = True
                 break
@@ -114,10 +96,6 @@ class HuePlugin(plugin.SpeechHandlerPlugin):
         mic.say("Turning off " + light_name)
         self._bridge.set_light(light_name, off)
 
-    def dim_light(self, light_name, mic):
-        mic.say("Dimming " + light_name)
-        self._bridge.set_light(light_name, dim)
-
     def turn_on_group(self, group_name, mic):
         mic.say("Turning on group " + group_name)
         self._bridge.set_light(group_name, on)
@@ -126,6 +104,43 @@ class HuePlugin(plugin.SpeechHandlerPlugin):
         mic.say("Turning off group " + group_name)
         self._bridge.set_light(group_name, off)
 
+    def dim_light(self, light_name, mic):
+        mic.say("Dimming " + light_name)
+        self._bridge.set_light(light_name, dim)
+
     def dim_group(self, group_name, mic):
         mic.say("Dimming group " + group_name)
         self._bridge.set_light(group_name, dim)
+
+    def connect_bridge(self):
+        try:
+            ip = self.profile['hue']['ip']
+        except KeyError:
+            ip = '192.168.2.101'
+
+        try:
+            self._bridge = Bridge(ip)
+            self._lights = self._bridge.get_light_objects()
+            self._groups = self._bridge.groups
+            self._light_names = []
+            self._group_names = []
+            for light in self._lights:
+                self._light_names.append(light.name)
+
+            for group in self._groups:
+                self._group_names.append(group.name)
+
+        except PhueRequestTimeout:
+            self._bridge = None
+            self._lights = None
+            self._light_names = []
+            self._group_names = []
+
+    def is_bridge_connected(self):
+        return self._bridge is not None
+
+    def get_light_names(self):
+        return self._light_names
+
+    def get_group_names(self):
+        return self._group_names

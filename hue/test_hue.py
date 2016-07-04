@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
+from mock import MagicMock
 from jasper import testutils
 import hue
 
@@ -7,6 +8,13 @@ import hue
 class TestHuePlugin(unittest.TestCase):
     def setUp(self):
         self.plugin = testutils.get_plugin_instance(hue.HuePlugin)
+        self.plugin.get_light_names = MagicMock(return_value = ['Bedroom light',
+                                                                'Kitchen light',
+                                                                'Living room light'])
+        self.plugin.get_group_names = MagicMock(return_value = ['Living room lights',
+                                                                'Living room lamps'])
+        self.plugin.is_bridge_connected = MagicMock(return_value = True)
+        self.plugin.connect_bridge = MagicMock()
 
     def test_is_valid_method(self):
         self.assertTrue(self.plugin.is_valid("Turn on the living room lights"))
